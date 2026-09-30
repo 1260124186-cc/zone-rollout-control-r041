@@ -249,6 +249,12 @@ func ValidateAssessmentInput(input AssessmentInput) error {
 	return nil
 }
 
+// ValidateRequestKey verifies the request key length and charset bounds. It
+// is exported so offline tooling can apply the same rule as the services.
+func ValidateRequestKey(value string) error {
+	return validateRequestKey(value)
+}
+
 func validateRequestKey(value string) error {
 	count := utf8.RuneCountInString(value)
 	if count < MinRequestKeyRunes || count > MaxRequestKeyRunes {

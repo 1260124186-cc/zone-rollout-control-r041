@@ -30,7 +30,7 @@ func Open(path string) (*Store, error) {
 		if err := json.Unmarshal(payload, &state); err != nil {
 			return nil, fmt.Errorf("decode snapshot: %w", err)
 		}
-		state = normalize(state)
+		state = Normalize(state)
 	case errors.Is(err, os.ErrNotExist):
 		if err := replaceFile(path, state); err != nil {
 			return nil, fmt.Errorf("initialize snapshot: %w", err)
@@ -114,7 +114,7 @@ func copyState(source *domain.State) (domain.State, error) {
 	if err := json.Unmarshal(payload, &copied); err != nil {
 		return domain.State{}, err
 	}
-	return normalize(copied), nil
+	return Normalize(copied), nil
 }
 
 func AddAudit(

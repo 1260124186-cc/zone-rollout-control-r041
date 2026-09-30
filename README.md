@@ -32,13 +32,52 @@ go run ./cmd/zrc \
 
 服务会锁定 `<state>.lock`，避免两个进程同时修改同一份状态。每次成功事务先复制状态，再通过同目录临时文件和原子替换写入快照。
 
+## 离线恢复快照
+
+`cmd/zrcrestore` 是纯离线工具：只读取本地候选快照和目标快照，不监听端口，也不连接任何运行中的服务。目标锁文件被占用时（说明服务仍在运行）命令直接拒绝操作。
+
+先只校验候选快照并预览将要初始化、替换或移除的对象（不写任何文件）：
+
+```bash
+go run ./cmd/zrcrestore \
+  --snapshot backups/candidate.json \
+  --target data/zrc-state.json
+```
+
+候选快照必须依次通过四组校验，任何一组失败都会被拒绝且不触碰目标：
+
+1. 格式：JSON 结构、schema 版本、必填顶层字段、严格实体字段、重复 JSON 键。
+2. 实体引用：修订、租约、探针、判定之间的归属和反向引用完整且一致。
+3. 幂等索引：`lease_request_keys`、`assessment_request_keys` 与对应记录一一对应。
+4. 摘要：`entry_count`、探针载荷指纹、判定计数/结论、计划最新指针全部可重算吻合。
+
+校验通过后，报告输出候选与目标的摘要（digest、各类对象计数）以及按集合分类的新增/替换/不变/移除对象列表。目标不存在时判定为 `initialize`，内容一致时为 `identical`（重复恢复不会重写），可读但不同或无法读取时为 `conflict`。
+
+显式确认后才原子写入目标（同目录临时文件 + rename），写后重读校验 digest，确保服务启动读到的计数与报告完全一致：
+
+```bash
+# 交互确认（需输入 restore）
+go run ./cmd/zrcrestore \
+  --snapshot backups/candidate.json \
+  --target data/zrc-state.json --apply
+
+# 非交互确认
+go run ./cmd/zrcrestore \
+  --snapshot backups/candidate.json \
+  --target data/zrc-state.json --apply --yes
+```
+
+写入失败会保留原文件；恢复前请先停止 `zrc` 服务以释放目标锁。
+
 ## 目录结构
 
 ```text
 cmd/zrc                     服务进程入口
+cmd/zrcrestore              离线快照恢复命令入口
 cmd/workflowprobe           工作流探针入口
 internal/domain             聚合、DNS 值校验、状态迁移和判定计算
 internal/store              锁内副本事务和原子 JSON 持久化
+internal/restore            离线快照校验、对象摘要、确认和原子恢复
 internal/platform           时钟、标识、游标和文件锁
 internal/plan               计划及区域版本服务
 internal/fleet              解析节点档案服务

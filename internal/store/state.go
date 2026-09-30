@@ -5,10 +5,12 @@ import "solo-0014-zone-rollout-control/internal/domain"
 const schemaVersion = 1
 
 func blankState() domain.State {
-	return normalize(domain.State{})
+	return Normalize(domain.State{})
 }
 
-func normalize(state domain.State) domain.State {
+// Normalize fills zero-value collections and the schema version so a state
+// always carries the full snapshot shape. It is idempotent.
+func Normalize(state domain.State) domain.State {
 	if state.SchemaVersion == 0 {
 		state.SchemaVersion = schemaVersion
 	}

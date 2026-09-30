@@ -2,10 +2,23 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"solo-0014-zone-rollout-control/internal/domain"
 )
+
+// PersistSnapshot atomically replaces the snapshot at path with the provided
+// state. The write goes through a same-directory temporary file and rename,
+// so any failure leaves a pre-existing file untouched.
+func PersistSnapshot(path string, state domain.State) error {
+	if path == "" {
+		return errors.New("snapshot path is required")
+	}
+	return replaceFile(path, Normalize(state))
+}
 
 func replaceFile(path string, value any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
