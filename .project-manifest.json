@@ -9,6 +9,11 @@
       "responsibility": "server process startup, flags, and graceful shutdown"
     },
     {
+      "id": "offline-recovery",
+      "path": "internal/recovery",
+      "responsibility": "offline snapshot format, reference, idempotency index and summary verification, conflict detection, and confirmed atomic restore"
+    },
+    {
       "id": "httpapi",
       "path": "internal/httpapi",
       "responsibility": "HTTP routes, strict decoding, middleware, and error mapping"
